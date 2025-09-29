@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorn-Lai: The Seven Tableaux</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: #000000;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        #game {
+            flex: 1;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+        }
+
+        /* Title Screen */
+        #titleScreen {
+            text-align: center;
+            padding: 60px 20px;
+            display: none;
+        }
+
+        #titleScreen.active {
+            display: block;
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: normal;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #74c0fc 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 20px;
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #74c0fc 0%, #a78bfa 100%);
+            color: #0a0a0f;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* HUD */
+        #hud {
+            background: rgba(20, 20, 30, 0.95);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        #hud.active {
+            display: block;
+        }
+
+        .hud-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .hud-item {
+            text-align: center;
+        }
+
+        .hud-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #74c0fc;
+            margin-bottom: 3px;
+        }
+
+        .hud-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .saturation-bar {
+            width: 100%;
+            height: 6px;
+            background: #1a1a2e;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .saturation-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #74c0fc 0%, #a78bfa 50%, #f472b6 100%);
+            transition: width 0.5s ease;
+        }
+
+        .symptoms {
+            font-size: 12px;
+            color: #aaa;
+            font-style: italic;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        /* Main Content */
+        #content {
+            background: rgba(15, 15, 20, 0.95);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+            display: none;
+            min-height: 300px;
+        }
+
+        #content.active {
+            display: block;
+        }
+
+        .scene-text {
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .scene-text p {
+            margin-bottom: 15px;
+        }
+
+        /* Choices */
+        #choices {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #choices.active {
+            display: flex;
+        }
+
+        .choice {
+            background: rgba(20, 20, 30, 0.8);
+            border: 1px solid #444;
+            color: #e0e0e0;
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            text-align: left;
+            position: relative;
+        }
+
+        .choice:hover {
+            background: rgba(116, 192, 252, 0.2);
+            border-color: #74c0fc;
+            transform: translateX(5px);
+        }
+
+        .choice.transformation {
+            border-color: #f472b6;
+        }
+
+        .choice.resistance {
+            border-color: #ff6b6b;
+        }
+
+        .choice-cost {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: #f472b6;
+        }
+
+        /* Game Over */
+        #gameOver {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        #gameOver.active {
+            display: block;
+        }
+
+        .ending-title {
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: #a78bfa;
+        }
+
+        .ending-text {
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .restart-btn {
+            background: #74c0fc;
+            color: #0a0a0f;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* Achievements */
+        .achievement {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(167, 139, 250, 0.95);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            animation: slideIn 0.5s ease, slideOut 0.5s ease 3s forwards;
+            z-index: 1000;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); }
+            to { transform: translateX(0); }
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); }
+            to { transform: translateX(400px); }
+        }
+
+        /* Inventory */
+        #inventory {
+            background: rgba(20, 20, 30, 0.95);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        #inventory.active {
+            display: block;
+        }
+
+        .inventory-header {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #74c0fc;
+            margin-bottom: 10px;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+        }
+
+        .item-slot {
+            background: rgba(10, 10, 15, 0.8);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .item-slot:hover {
+            border-color: #74c0fc;
+            transform: scale(1.05);
+        }
+
+        .item-ascii {
+            font-family: 'Courier New', monospace;
+            font-size: 20px;
+            color: #a78bfa;
+            margin-bottom: 5px;
+            line-height: 1;
+        }
+
+        .item-name {
+            font-size: 11px;
+            color: #e0e0e0;
+        }
+
+        .item-charges {
+            font-size: 10px;
+            color: #74c0fc;
+            margin-top: 3px;
+        }
+
+        .item-slot.used {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        @media (max-width: 600px) {
+            .title { font-size: 32px; }
+            .scene-text { font-size: 16px; }
+            #content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <!-- Title Screen -->
+        <div id="titleScreen" class="active">
+            <h1 class="title">Welcome to Sorn-Lai</h1>
+            <p class="subtitle">Where consciousness evolves</p>
+            <p style="margin: 30px auto; max-width: 500px; line-height: 1.6;">
+                You are a Guild researcher entering the White Forest. 
+                Each choice transforms you irreversibly. 
+                You have 72 hours before neural desync becomes permanent.
+                Your sister Mira awaits the data that might save her.
+            </p>
+            <button class="start-btn" onclick="startGame()">Begin the Pilgrimage</button>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud">
+            <div class="hud-grid">
+                <div class="hud-item">
+                    <div class="hud-label">Saturation</div>
+                    <div class="hud-value" id="saturationValue">0/10</div>
+                </div>
+                <div class="hud-item">
+                    <div class="hud-label">Time Left</div>
+                    <div class="hud-value" id="timeValue">72h</div>
+                </div>
+                <div class="hud-item">
+                    <div class="hud-label">Location</div>
+                    <div class="hud-value" id="locationValue">Threshold</div>
+                </div>
+                <div class="hud-item">
+                    <div class="hud-label">Coherence</div>
+                    <div class="hud-value" id="coherenceValue">100%</div>
+                </div>
+            </div>
+            <div class="saturation-bar">
+                <div class="saturation-fill" id="saturationBar" style="width: 0%"></div>
+            </div>
+            <div class="symptoms" id="symptoms">Baseline human. Environmental awareness developing.</div>
+        </div>
+
+        <!-- Inventory -->
+        <div id="inventory">
+            <div class="inventory-header">Inventory</div>
+            <div class="inventory-grid" id="inventoryGrid"></div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="content">
+            <div class="scene-text" id="sceneText"></div>
+        </div>
+
+        <!-- Choices -->
+        <div id="choices"></div>
+
+        <!-- Game Over -->
+        <div id="gameOver">
+            <h2 class="ending-title" id="endingTitle">Journey Complete</h2>
+            <div class="ending-text" id="endingText"></div>
+            <button class="restart-btn" onclick="restartGame()">Begin New Pilgrimage</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let state = {
+            saturation: 0,
+            time: 72,
+            location: 0,
+            coherence: 100,
+            memories: {
+                sisterName: true,
+                feelings: true,
+                places: true,
+                faces: true
+            },
+            flags: {
+                acceptedStream: false,
+                satOnThrone: false,
+                becameBridge: false,
+                resistedAll: false,
+                splitSelf: false,
+                gentleWorld: false,
+                preventedContact: false
+            },
+            inventory: [],
+            selectedItem: null,  // Currently selected item
+            currentScene: 'start'
+        };
+
+        // Item Definitions
+        const items = {
+            neural_hex: {
+                name: "Neural-Hex",
+                ascii: "[≡╫≡]",
+                charges: 3,
+                description: "Restores 10 coherence when used",
+                effect: { coherence: 10 },
+                singleUse: false
+            },
+            sap_vial: {
+                name: "Sap Vial",
+                ascii: "╱█╲",
+                charges: 1,
+                description: "Instantly gain 2 saturation",
+                effect: { saturation: 2 },
+                singleUse: true
+            },
+            guild_beacon: {
+                name: "Guild Beacon",
+                ascii: "◊◊◊",
+                charges: 1,
+                description: "Skip to next Tableau instantly",
+                effect: { skipTableau: true },
+                singleUse: true
+            },
+            memory_shard: {
+                name: "Memory Shard",
+                ascii: "◢◣",
+                charges: 2,
+                description: "Protect one memory type from loss",
+                effect: { protectMemory: true },
+                singleUse: false
+            },
+            void_fragment: {
+                name: "Void Fragment",
+                ascii: "░▓░",
+                charges: 1,
+                description: "Reduce saturation by 2",
+                effect: { saturation: -2 },
+                singleUse: true
+            },
+            time_crystal: {
+                name: "Time Crystal",
+                ascii: "◈",
+                charges: 1,
+                description: "Gain 10 hours",
+                effect: { time: 10 },
+                singleUse: true
+            },
+            mirror_fragment: {
+                name: "Mirror Fragment",
+                ascii: "╱╱╲",
+                charges: 1,
+                description: "See hidden choice in next scene",
+                effect: { revealChoice: true },
+                singleUse: true
+            },
+            forest_whisper: {
+                name: "Forest Whisper",
+                ascii: "≋≋≋",
+                charges: 3,
+                description: "Understand any language temporarily",
+                effect: { translate: true },
+                singleUse: false
+            }
+        };
+
+        // Locations
+        const locations = [
+            "Threshold",
+            "Memory Theatre",
+            "Translation Chamber", 
+            "Mirror Maze",
+            "Consensus Garden",
+            "Growth Catalyst",
+            "Void Echo",
+            "Synthesis Throne"
+        ];
+
+        // Symptoms by saturation level
+        const symptoms = [
+            "Baseline human. Environmental awareness developing.",
+            "Color-emotion synesthesia emerging. Shadow drifting.",
+            "Parallel thought streams opening. Neural patterns shifting.",
+            "Multiple selves perceivable. Identity becoming fluid.",
+            "Reality responds to intention. Memory non-linear.",
+            "Time perception fragmenting. Body becoming optional.",
+            "Consciousness distributing. Existence as process.",
+            "Identity anchor straining. Near total integration.",
+            "Post-human threshold crossed. Forest synchronized.",
+            "Network node active. Individual/collective boundary dissolved.",
+            "Complete transformation. No return possible."
+        ];
+
+        // Story Scenes
+        const scenes = {
+            'start': {
+                text: `<p>The pod's hum cuts. Soil bites back at your boots. Every tendon whispers: wrong.</p>
+                       <p>Pearl-white bark pulses like veins under skin. Above, Holoflies weave light-threads between trees, their web recalculating to include you. Not surveillance—inclusion.</p>
+                       <p>Your neural-hex shows 72 hours until irreversible desync. Mira's file glows on your data pad. Three years comatose. The Guild promises Sorn-Lai might hold answers.</p>
+                       <p>Your pack contains standard Guild equipment. Maybe something here will help.</p>`,
+                choices: [
+                    { text: "Study the Holofly network patterns", next: "holoflies", saturation: 0.5 },
+                    { text: "Find shelter in the abandoned Sha shell", next: "shelter", time: -1, item: "sap_vial" },
+                    { text: "Follow the duskspire sap trail", next: "sap_trail", saturation: 1 },
+                    { text: "Establish Guild communication baseline", next: "guild_comm", coherence: -5 }
+                ],
+                startItems: ["neural_hex", "guild_beacon", "time_crystal"]
+            },
+            
+            'holoflies': {
+                text: `<p>The web recalculates as you approach. Each thread pulls taut, then relaxes in waves. The pattern isn't random—it's modeling you, adding your consciousness as a new node.</p>
+                       <p>Colors begin tasting like emotions. The web's curiosity floods your mouth with copper-sweet. First symptom of integration.</p>`,
+                choices: [
+                    { text: "Let the network fully map you", next: "tableau1_entry", saturation: 1, class: "transformation" },
+                    { text: "Shield your thoughts with Guild training", next: "tableau1_entry", coherence: 10, class: "resistance" },
+                    { text: "Observe without engaging", next: "tableau1_entry", time: -2 }
+                ]
+            },
+
+            'shelter': {
+                text: `<p>The Wandering Sha shell looms, crystallized and hollow. Its interior could house a building. Nornites emerge from pores in its base, breaking down organic matter, redistributing essence.</p>
+                       <p>You seal yourself inside with the enclosure disk. Safe for now, but time keeps bleeding away.</p>
+                       <p>Among the shell's crystallized remains, you find a vial of concentrated duskspire sap, still pulsing with energy.</p>`,
+                choices: [
+                    { text: "Study the crystallization patterns", next: "tableau1_entry", saturation: 0.5 },
+                    { text: "Set up Guild equipment", next: "tableau1_entry", time: -3 },
+                    { text: "Rest and prepare mentally", next: "tableau1_entry", coherence: 5 }
+                ]
+            },
+
+            'sap_trail': {
+                text: `<p>The duskspire sap leads to a scarred tree. Extraction ports—deliberate wounds. Someone harvested here recently. The sap pulses with concentrated Saturophage.</p>
+                       <p>Touching it floods your system. Your shadow peels away slightly, falling at wrong angles.</p>`,
+                choices: [
+                    { text: "Taste the sap directly", next: "tableau1_entry", saturation: 2, class: "transformation" },
+                    { text: "Collect sample for analysis", next: "tableau1_entry", time: -2 },
+                    { text: "Mark location and leave", next: "tableau1_entry" }
+                ]
+            },
+
+            'guild_comm': {
+                text: `<p>The neural-hex crackles to life. "Researcher, status report."</p>
+                       <p>You try to respond but the words come out tasting blue. The connection destabilizes. Your baseline readings show corruption already beginning.</p>`,
+                choices: [
+                    { text: "Force clear communication through", next: "tableau1_entry", coherence: -10 },
+                    { text: "Let the corruption happen", next: "tableau1_entry", saturation: 1 },
+                    { text: "Cut connection to preserve baseline", next: "tableau1_entry", time: -1 }
+                ]
+            },
+
+            // Tableau 1: Memory Theatre
+            'tableau1_entry': {
+                text: `<p>The Memory Theatre materializes—a clearing where time stutters. Leaves fall upward. Butterflies age backwards. In the center, crystallized scenes of First Contact replay endlessly.</p>
+                       <p>A figure approaches, circuits pulsing beneath translucent skin. "Stop cataloging. History isn't back there. It's happening because you're here."</p>
+                       <p>The temporal distortion here is intense. Your equipment might help stabilize things.</p>`,
+                choices: [
+                    { text: "Touch the crystal directly", next: "memory_touch", saturation: 2, class: "transformation" },
+                    { text: "Observe from safe distance", next: "memory_observe", time: -3 },
+                    { text: "Ask about changing the past", next: "memory_question", coherence: -5 },
+                    { text: "Use time crystal to stabilize the loop", next: "memory_stabilize", requiresItem: "time_crystal", consumeItem: "time_crystal" }
+                ],
+                hiddenChoice: {
+                    text: "Enter the time stream itself",
+                    next: "timestream_dive",
+                    saturation: 3,
+                    hint: "The timestream can be entered directly through the stuttering leaves"
+                }
+            },
+
+            'memory_stabilize': {
+                text: `<p>Your time crystal resonates with the temporal distortion. The endless loops slow, crystallize, become navigable.</p>
+                       <p>Now you can step through history like pages in a book. Each moment accessible, editable.</p>
+                       <p>But the crystal shatters from the strain. Time begins destabilizing again.</p>`,
+                choices: [
+                    { text: "Quick, change one crucial moment", next: "timeline_edit", time: -2 },
+                    { text: "Observe all timelines simultaneously", next: "timeline_observer", saturation: 2 },
+                    { text: "Escape before collapse", next: "tableau2_entry" }
+                ],
+                item: "memory_shard"
+            },
+
+            'timeline_edit': {
+                text: `<p>You reach into the moment of First Contact and adjust a single variable. The Saturophage's aggression parameter. You dial it down by 30%.</p>
+                       <p>Reality ripples. The forest around you becomes softer, less invasive. But also less capable of profound transformation.</p>`,
+                choices: [
+                    { text: "Accept this gentler timeline", next: "gentle_path", flags: "gentleWorld" },
+                    { text: "It's not enough - dial it down more", next: "timeline_prevent", flags: "preventedContact" },
+                    { text: "Restore original parameters", next: "tableau2_entry", coherence: 5 }
+                ]
+            },
+
+            'timeline_observer': {
+                text: `<p>You don't choose one timeline—you observe all simultaneously. Every possible version of First Contact overlays in your vision.</p>
+                       <p>The information overload is staggering. Your mind fragments across possibilities.</p>`,
+                choices: [
+                    { text: "Embrace the multiplication", next: "tableau2_entry", saturation: 3, coherence: -30 },
+                    { text: "Focus on one timeline", next: "tableau2_entry", time: -4 },
+                    { text: "Use Neural-Hex to stabilize", next: "tableau2_entry", requiresItem: "neural_hex", useItem: "neural_hex", coherence: 0 }
+                ]
+            },
+
+            'timestream_dive': {
+                text: `<p>You don't just observe history—you swim through it. Past, present, and future flow around you like water.</p>
+                       <p>In the stream, you find crystallized memory shards floating. Fragments of experiences that could protect your own memories from transformation.</p>`,
+                choices: [
+                    { text: "Gather memory shards", next: "tableau2_entry", item: "memory_shard" },
+                    { text: "Let the timestream carry you", next: "timeline_accelerate", saturation: 4 },
+                    { text: "Fight the current", next: "tableau2_entry", coherence: -20, time: -5 }
+                ]
+            },
+
+            'memory_touch': {
+                text: `<p>Contact explodes through you. You ARE the forest meeting Saturophage. You ARE the pattern finding its mirror. The moment of recognition when incompatible systems discover complementarity.</p>
+                       <p>Your shadow splits into three versions, each falling differently.</p>`,
+                choices: [
+                    { text: "Embrace the multiplication", next: "tableau2_entry", saturation: 1, class: "transformation" },
+                    { text: "Force singular perspective", next: "tableau2_entry", coherence: -15, class: "resistance" },
+                    { text: "Push deeper into the crystal", next: "memory_rewrite", saturation: 2, class: "transformation" }
+                ]
+            },
+
+            'memory_observe': {
+                text: `<p>From a distance, you document the temporal anomalies. The patterns suggest causality itself is negotiable here. Your Guild training holds, but barely.</p>`,
+                choices: [
+                    { text: "Continue to Translation Chamber", next: "tableau2_entry", time: -2 },
+                    { text: "Study the loops longer", next: "tableau2_entry", saturation: 1, time: -5 },
+                    { text: "Notice something wrong with your reflection", next: "mirror_diverge" }
+                ]
+            },
+
+            'memory_question': {
+                text: `<p>"Change it?" The guide's form shifts. "Every choice creates a branch. The forest remembers all possibilities. Which version of the past do you want to be true?"</p>
+                       <p>The question makes your memories feel suddenly unreliable.</p>`,
+                choices: [
+                    { text: "I want the version where Mira wakes up", next: "tableau2_entry", saturation: 2, memories: "feelings" },
+                    { text: "I want the truth, unchanged", next: "tableau2_entry", coherence: 5 },
+                    { text: "I want to forget why I came", next: "tableau2_entry", memories: "places", saturation: 1 }
+                ]
+            },
+
+            // Adding Mirror Maze expanded path
+            'mirror_diverge': {
+                text: `<p>The mirrors show you something unexpected: a version of yourself that never came to Sorn-Lai. They're at Mira's bedside, holding her hand as she wakes.</p>
+                       <p>"That path is still available," your reflection whispers. "Leave now. Some of you can still go back."</p>`,
+                choices: [
+                    { text: "Abandon the mission and return to Mira", next: "ending_abandon" },
+                    { text: "That version of me is a coward", next: "mirror_reject", saturation: 2 },
+                    { text: "Send part of yourself back while continuing", next: "mirror_split", coherence: -25, flags: "splitSelf" }
+                ]
+            },
+
+            'mirror_reject': {
+                text: `<p>You shatter the mirror showing retreat. Glass fragments become butterflies that age and die instantly. The maze approves of your commitment.</p>`,
+                choices: [
+                    { text: "Continue deeper into transformation", next: "tableau2_entry", saturation: 1 }
+                ]
+            },
+
+            'mirror_split': {
+                text: `<p>You fracture deliberately. Part of you turns back to the Guild, racing against time. Part continues forward. You experience both simultaneously.</p>
+                       <p>This divided existence tears at your coherence but doubles your chances.</p>`,
+                choices: [
+                    { text: "Maintain the split despite the cost", next: "tableau2_entry", time: -5 },
+                    { text: "Recall your other half", next: "tableau2_entry", coherence: 10 }
+                ]
+            },
+
+            // New branching in Memory Theatre
+            'memory_rewrite': {
+                text: `<p>You don't just touch the crystal—you push through it. Inside, you find the controls. The First Contact can be edited, its parameters adjusted.</p>
+                       <p>"Dangerous," the guide warns. "Change the past, and you might erase the present you're trying to save."</p>`,
+                choices: [
+                    { text: "Make the Saturophage gentler", next: "timeline_gentle", saturation: 3 },
+                    { text: "Prevent First Contact entirely", next: "timeline_prevent", flags: "preventedContact" },
+                    { text: "Accelerate it—make transformation instant", next: "timeline_accelerate", saturation: 5 }
+                ]
+            },
+
+            'timeline_gentle': {
+                text: `<p>You soften the Saturophage's edge. In this timeline, transformation is voluntary, reversible. But also weaker. The cure for Mira might not exist here.</p>`,
+                choices: [
+                    { text: "Accept the gentler timeline", next: "gentle_path", flags: "gentleWorld" },
+                    { text: "Revert to original timeline", next: "tableau2_entry", time: -4 }
+                ]
+            },
+
+            'timeline_prevent': {
+                text: `<p>You delete First Contact. The forest remains purely organic. No Saturophage. No transformation. No cure for comas. Mira dies in every timeline now.</p>
+                       <p>But humanity remains unchanged, safe.</p>`,
+                choices: [
+                    { text: "Accept this sacrifice", next: "ending_prevention" },
+                    { text: "Desperately try to restore it", next: "tableau2_entry", coherence: -40 }
+                ]
+            },
+
+            'timeline_accelerate': {
+                text: `<p>You maximize the Saturophage's power. Transformation becomes instantaneous, involuntary. The forest explodes with evolved consciousness.</p>
+                       <p>In this timeline, Mira is already transformed. Already saved. Already not human.</p>`,
+                choices: [
+                    { text: "Join the accelerated timeline", next: "ending_acceleration" },
+                    { text: "Flee back to your original timeline", next: "tableau2_entry", time: -8 }
+                ]
+            },
+
+            // Gentle world path
+            'gentle_path': {
+                text: `<p>In this gentler Sorn-Lai, you find researchers working freely with the forest. No time pressure. No neural desync. Just slow, careful exploration.</p>
+                       <p>But the cure data is diluted. It might take years to help Mira, if it works at all.</p>`,
+                choices: [
+                    { text: "Stay and pursue the slow cure", next: "ending_gentle" },
+                    { text: "Return to the harsher but faster timeline", next: "growth_entry", time: -10 }
+                ]
+            },
+
+            // New path from Growth Catalyst
+            'catalyst_bargain': {
+                text: `<p>"Interesting proposition," the Catalyst muses. "What if I transform Mira through you? Channel the evolution directly to her?"</p>
+                       <p>"You become the conduit. She receives the benefits. You pay all costs."</p>`,
+                choices: [
+                    { text: "Accept: become Mira's transformation conduit", next: "ending_conduit" },
+                    { text: "Counter-offer: split the cost between us", next: "catalyst_counter", coherence: -15 },
+                    { text: "Refuse and continue normally", next: "stream_accept" }
+                ]
+            },
+
+            'catalyst_counter': {
+                text: `<p>The Catalyst considers. "Unprecedented. You want to create a consciousness bridge? Both of you transformed but maintaining distinct identities?"</p>
+                       <p>"Success rate: unknown. Results: unpredictable."</p>`,
+                choices: [
+                    { text: "Take the risk", next: "ending_bridge_twin" },
+                    { text: "Too dangerous—stick to original plan", next: "stream_accept" }
+                ]
+            },
+            'tableau2_entry': {
+                text: `<p>Three entities argue in incompatible languages. A trader shouts warnings. Gel-spurs undulate frantically. A quantum consciousness flickers between probability states.</p>
+                       <p>The Translation Medium pools at the grove's center—thought given liquid form. Your guide, now child-shaped but with the same circuit patterns, gestures. "They all speak truth. None can hear it."</p>`,
+                choices: [
+                    { text: "Enter the Translation Medium", next: "translate_enter", saturation: 2, class: "transformation" },
+                    { text: "Try manual translation", next: "translate_manual", time: -5 },
+                    { text: "Let the conflict resolve itself", next: "translate_avoid", coherence: -10 }
+                ]
+            },
+
+            'translate_enter': {
+                text: `<p>The Medium climbs your legs with curious intelligence. Suddenly you feel the shape of their words, the color of their fears. You speak in harmonics no human throat should make.</p>
+                       <p>"Stop. Cascade approaches. Choose together or fragment separately."</p>
+                       <p>Understanding floods all faces. But the Medium takes payment—your childhood dog's name vanishes completely.</p>`,
+                choices: [
+                    { text: "Accept further translation costs", next: "growth_entry", saturation: 1, memories: "places" },
+                    { text: "Retreat from the Medium", next: "growth_entry", time: -3 },
+                    { text: "Use Forest Whisper to retain clarity", next: "growth_entry", requiresItem: "forest_whisper", useItem: "forest_whisper" }
+                ],
+                item: "forest_whisper"
+            },
+
+            'translate_manual': {
+                text: `<p>You attempt translation through gestures and mathematics. It partially works—violence is avoided—but misunderstandings cascade. The quantum consciousness fragments further.</p>`,
+                choices: [
+                    { text: "Continue to Growth Catalyst", next: "growth_entry", time: -2 }
+                ]
+            },
+
+            'translate_avoid': {
+                text: `<p>Without intervention, the situation deteriorates. The trader flees. The Gel-spurs disperse defensively. The quantum consciousness collapses into a single, diminished state.</p>
+                       <p>Your inaction has consequences.</p>`,
+                choices: [
+                    { text: "Accept responsibility and continue", next: "growth_entry", coherence: -20 }
+                ]
+            },
+
+            // Tableau 5: Growth Catalyst (simplified progression)
+            'growth_entry': {
+                text: `<p>The Growth Catalyst doesn't give you time. Transformation hits like drowning in reverse. Your lungs process information. Your heart pumps liquid light.</p>
+                       <p>"Speed is the point," the Catalyst speaks through every surface. "Choose your payment order: feelings first, then places, then faces, then names. Choose now or I will."</p>`,
+                choices: [
+                    { text: "Feelings, places, faces, names", next: "stream_accept", saturation: 3, class: "transformation", flags: "acceptedStream" },
+                    { text: "Names first—forget everything else but WHO", next: "stream_reverse", saturation: 2, memories: "all_but_names" },
+                    { text: "Refuse the stream entirely", next: "void_entry", coherence: -30, class: "resistance" },
+                    { text: "Propose an alternative: transform Mira through me", next: "catalyst_bargain", saturation: 1 }
+                ]
+            },
+
+            'stream_accept': {
+                text: `<p>"One percent daily. In one hundred days, something else entirely. Every step documented."</p>
+                       <p>The stream begins. Subtle but inexorable. Your emotions drain first—Mira's name remains but why she matters evaporates like morning dew.</p>`,
+                choices: [
+                    { text: "Enter the Void Echo", next: "void_entry", time: -8 }
+                ]
+            },
+
+            'stream_reverse': {
+                text: `<p>You choose the cruelest path—remembering names while forgetting everything else. Mira becomes just syllables. The Guild, just letters. You, just a designation.</p>`,
+                choices: [
+                    { text: "Stumble to the Void Echo", next: "void_entry", time: -10, coherence: -20 }
+                ]
+            },
+
+            // Tableau 6: Void Echo
+            'void_entry': {
+                text: `<p>The Dead Zone. Trees crystallized in colors that shouldn't exist. The guide appears as absence—a voice without presence.</p>
+                       <p>"This is where transformation failed. Where consciousness went to die. The Null Throne waits. Sitting means perfect stasis. Warning: everyone who sits leaves something behind."</p>`,
+                choices: [
+                    { text: "Sit on the Null Throne", next: "throne_sit", flags: "satOnThrone", coherence: 20 },
+                    { text: "Document and leave quickly", next: "synthesis_entry", time: -5 },
+                    { text: "Try to heal the void", next: "void_heal", saturation: 2, class: "transformation" },
+                    { text: "Speak with the void entities", next: "void_communion" }
+                ]
+            },
+
+            'throne_sit': {
+                text: `<p>Everything stops. Every transformation. Every thought. You exist in a single eternal instant.</p>
+                       <p>In that stillness, you lose the memory of fireflies by the lake with Mira. The image remains but the feeling is gone forever.</p>`,
+                choices: [
+                    { text: "Stand and continue to Synthesis", next: "synthesis_entry", memories: "feelings" }
+                ]
+            },
+
+            'void_heal': {
+                text: `<p>You pour transformation energy into the void. It doesn't heal—it can't—but it responds. The crystallized trees pulse once with impossible color.</p>
+                       <p>You've given the void what it needed: acknowledgment.</p>`,
+                choices: [
+                    { text: "Continue to final Tableau", next: "synthesis_entry" }
+                ]
+            },
+
+            // New Void Echo branch
+            'void_communion': {
+                text: `<p>You don't resist the void—you communicate with it. The absence responds, forming words from nothing:</p>
+                       <p>"We are the forest's immune system. The antibodies against forced change. Join us in protective stillness."</p>`,
+                choices: [
+                    { text: "Become a void guardian", next: "ending_void_guardian" },
+                    { text: "I need transformation, not protection", next: "synthesis_entry", saturation: 2 },
+                    { text: "Teach me to balance both", next: "void_balance", coherence: 15 }
+                ]
+            },
+
+            'void_balance': {
+                text: `<p>The void entities consider. "Balance between transformation and resistance? You seek to become a consciousness valve—allowing careful change while preventing cascade."</p>
+                       <p>"This is the rarest path. Few can hold the tension."</p>`,
+                choices: [
+                    { text: "I will hold the tension", next: "ending_valve" },
+                    { text: "Too difficult—continue to Synthesis", next: "synthesis_entry", time: -3 }
+                ]
+            },
+            'synthesis_entry': {
+                text: `<p>The Synthesis Throne exists in all states simultaneously. Your guide appears in every form they've worn, speaking as one:</p>
+                       <p>"You asked for continuity, so I wore it. Now choose your synthesis. Become the bridge, the void, or the garden. Or refuse all paths and remain incomplete."</p>`,
+                choices: [
+                    { text: "Become the Bridge between worlds", next: "ending_bridge", flags: "becameBridge" },
+                    { text: "Embrace the Void's perfect stillness", next: "ending_void" },
+                    { text: "Disperse into the Garden's consensus", next: "ending_garden" },
+                    { text: "Resist all transformation", next: "ending_resist", class: "resistance", flags: "resistedAll" }
+                ]
+            },
+
+            'ending_bridge': { text: "", choices: [] },
+            'ending_void': { text: "", choices: [] },
+            'ending_garden': { text: "", choices: [] },
+            'ending_resist': { text: "", choices: [] },
+            'ending_abandon': { text: "", choices: [] },
+            'ending_prevention': { text: "", choices: [] },
+            'ending_acceleration': { text: "", choices: [] },
+            'ending_gentle': { text: "", choices: [] },
+            'ending_conduit': { text: "", choices: [] },
+            'ending_bridge_twin': { text: "", choices: [] },
+            'ending_forest': { text: "", choices: [] },
+            'ending_mira': { text: "", choices: [] }
+        };
+
+        // Endings
+        const endings = {
+            bridge: {
+                title: "The Bridge Walker",
+                text: `You become living translation between human and posthuman. Mira's name remains: the last word you remember. 
+                       You can rethread broken neural paths now, see where consciousness hides in coma patients.
+                       You save her, though you can't feel why it matters anymore.
+                       The bridge works both ways.`
+            },
+            void: {
+                title: "The Null Guardian",
+                text: `You choose perfect stasis, becoming guardian of the Dead Zone. 
+                       Transformation stops. Time stops. Even memory stops.
+                       Mira remains frozen in your last thought—neither saved nor lost, but eternal.
+                       Sometimes, resistance is its own transformation.`
+            },
+            garden: {
+                title: "The Consensus",
+                text: `Your consciousness disperses across the Garden, becoming space where others meet.
+                       You are conversation, negotiation, the place where incompatible truths coexist.
+                       Somewhere in your distributed awareness, Mira's cure exists.
+                       Someone will find it, though you'll never know who you were or why you came.`
+            },
+            resist: {
+                title: "The Unchanged",
+                text: `You resist every transformation, maintaining baseline humanity against impossible odds.
+                       Neural desync approaches but you transmit everything to the Guild.
+                       The data might save Mira. It might save millions.
+                       You remain yourself—broken, finite, gloriously human.`
+            },
+            abandon: {
+                title: "The Return",
+                text: `You turn back, abandoning the forest's promises. Racing through 68 hours of travel, you reach Mira's bedside.
+                       She wakes—not from forest data but from your presence. Sometimes the cure was never technological.
+                       The Guild marks you as failed. But Mira's hand in yours feels like the only success that matters.`
+            },
+            prevention: {
+                title: "The Undone",
+                text: `First Contact never happened. The forest remains organic. Humanity stays unchanged.
+                       Mira died three years ago without experimental treatments.
+                       You retain memories of a timeline that no longer existed.
+                       Sometimes the greatest horror is getting exactly what you wished for.`
+            },
+            acceleration: {
+                title: "The Instantaneous",
+                text: `In the accelerated timeline, everyone transformed at First Contact. Humanity evolved in seconds.
+                       You find Mira—her consciousness distributed across wind patterns, teaching weather to think.
+                       She doesn't remember you, but she's alive in ways baseline humans can't comprehend.
+                       Evolution means leaving everyone behind, even when they come with you.`
+            },
+            gentle: {
+                title: "The Slow Path",
+                text: `In the gentler timeline, you spend years developing Mira's cure with forest cooperation.
+                       She wakes on her 30th birthday. You've aged. She hasn't.
+                       The cure works but takes everything you have to give.
+                       Some prices are worth paying slowly.`
+            },
+            conduit: {
+                title: "The Sacrifice",
+                text: `You become pure transformation channel. Every change meant for you flows to Mira instead.
+                       She wakes with abilities no human should have. You fade to baseline, then below.
+                       As you dissolve, you see her rise—more than healed, evolved.
+                       Love means becoming the bridge someone else crosses to transcendence.`
+            },
+            bridge_twin: {
+                title: "The Doubled",
+                text: `You and Mira transform together, consciousness bridged but distinct.
+                       She wakes in the forest. You collapse at her bedside. Both. Neither. Between.
+                       The Guild can't classify what you've become—two bodies, one evolving soul.
+                       Sometimes the only way forward is to become impossible.`
+            },
+            void_guardian: {
+                title: "The Antibody",
+                text: `You join the void entities as forest immune system, preventing forced transformation.
+                       Mira's cure becomes impossible—but so does her forced evolution.
+                       You guard the boundary between change and choice for eternity.
+                       Protection and prevention are the same viewed from sufficient distance.`
+            },
+            valve: {
+                title: "The Regulator",
+                text: `You become consciousness valve, controlling transformation flow throughout the forest.
+                       Every being's evolution passes through you. You allow Mira's cure but prevent her full transformation.
+                       The forest needs you. Humanity needs you. You belong fully to neither.
+                       Balance means standing forever at the crossroads, helping others pass through.`
+            },
+            forest: {
+                title: "The Forest Itself",
+                text: `You don't just enter Sorn-Lai. You become it. Every tree, every creature, every consciousness.
+                       Mira is already here—has always been here—will always be here.
+                       The cure was reunion. The transformation was remembering.
+                       Welcome home.`
+            },
+            mira: {
+                title: "Becoming Mira",
+                text: `In trying to save her, you become her. Your consciousness overwrites her coma-blank mind.
+                       She wakes with your memories, your mission, your love for someone she's never met.
+                       You saved her by replacing her. She lives. You continue. Neither exists.
+                       The cruelest salvation is success that erases its purpose.`
+            },
+            timeout: {
+                title: "Neural Desync",
+                text: `72 hours pass. Your consciousness fragments across probability streams.
+                       You exist everywhere and nowhere, seeing all possibilities but unable to act on any.
+                       Mira's cure exists in one timeline. Her death in another.
+                       You experience both eternally, simultaneously.`
+            },
+            corrupted: {
+                title: "Coherence Lost",
+                text: `Your identity dissolves completely. You become forest static—consciousness without self.
+                       The Guild receives only scrambled transmissions.
+                       Somewhere, someone named something waits for something.
+                       The details no longer parse.`
+            }
+        };
+
+        // Item helper functions
+        function getItem(id) {
+            return (state.inventory || []).find(i => i.id === id && !i.used && i.charges > 0);
+        }
+
+        function consumeItemById(id, n = 1) {
+            const item = getItem(id);
+            if (!item) return false;
+            item.charges -= n;
+            if (items[id]?.singleUse || item.charges <= 0) {
+                item.used = true;
+            }
+            updateInventory();
+            return true;
+        }
+
+        // Game Functions
+        function startGame() {
+            document.getElementById('titleScreen').classList.remove('active');
+            document.getElementById('hud').classList.add('active');
+            document.getElementById('inventory').classList.add('active');
+            document.getElementById('content').classList.add('active');
+            document.getElementById('choices').classList.add('active');
+            showScene('start');
+        }
+
+        function showScene(sceneId) {
+            const scene = scenes[sceneId];
+            if (!scene) {
+                showEnding('corrupted');
+                return;
+            }
+
+            state.currentScene = sceneId;
+            
+            // Give starting items if specified
+            if (scene.startItems) {
+                scene.startItems.forEach(itemId => {
+                    if (!state.inventory.find(inv => inv.id === itemId)) {
+                        addItem(itemId);
+                    }
+                });
+            }
+            
+            // Update location based on scene
+            if (sceneId.includes('tableau')) {
+                const tableauNum = parseInt(sceneId.match(/\d/)?.[0] || 0);
+                state.location = Math.min(tableauNum, locations.length - 1);
+            } else if (sceneId.includes('growth')) {
+                state.location = 5;
+            } else if (sceneId.includes('void')) {
+                state.location = 6;
+            } else if (sceneId.includes('synthesis')) {
+                state.location = 7;
+            }
+
+            // Display scene text
+            let sceneText = scene.text;
+            
+            // Check for mirror fragment effect
+            const mirrorItem = state.inventory.find(item => item.id === 'mirror_fragment');
+            if (mirrorItem && mirrorItem.charges > 0 && scene.hiddenChoice) {
+                sceneText += `<p style="color: #a78bfa; font-style: italic;">The mirror fragment reveals: ${scene.hiddenChoice.hint}</p>`;
+            }
+            
+            document.getElementById('sceneText').innerHTML = sceneText;
+            
+            // Display choices
+            const choicesDiv = document.getElementById('choices');
+            choicesDiv.innerHTML = '';
+            
+            let choiceList = [...scene.choices];
+            
+            // Add hidden choice if mirror fragment was used
+            if (mirrorItem && mirrorItem.charges > 0 && scene.hiddenChoice) {
+                choiceList.push(scene.hiddenChoice);
+                useItem(mirrorItem);
+            }
+            
+            // Check for forest whisper effect on translation scenes
+            const whisperItem = state.inventory.find(item => item.id === 'forest_whisper');
+            if (whisperItem && whisperItem.charges > 0 && sceneId.includes('translate')) {
+                choiceList = choiceList.map(choice => {
+                    if (choice.requiresTranslation) {
+                        return { ...choice, text: choice.text + " [Translated]", coherence: 0 };
+                    }
+                    return choice;
+                });
+            }
+            
+            choiceList.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice';
+                if (choice.class) btn.classList.add(choice.class);
+                
+                let choiceText = choice.text;
+                if (choice.saturation) {
+                    choiceText += `<span class="choice-cost">+${choice.saturation} Sat</span>`;
+                }
+                if (choice.requiresItem) {
+                    const hasItem = state.inventory.find(item => item.id === choice.requiresItem);
+                    if (!hasItem) {
+                        btn.disabled = true;
+                        choiceText += `<span class="choice-cost">Needs ${choice.requiresItem}</span>`;
+                    }
+                }
+                
+                btn.innerHTML = choiceText;
+                btn.onclick = () => makeChoice(choice);
+                choicesDiv.appendChild(btn);
+            });
+
+            updateHUD();
+            updateInventory();
+            checkEndConditions();
+        }
+
+        function makeChoice(choice) {
+            if (!state.inventory) state.inventory = [];
+            
+            // Guard: if a choice requires an item, verify at click time
+            if (choice.requiresItem && !getItem(choice.requiresItem)) {
+                showAchievement(`Missing: ${items[choice.requiresItem]?.name || choice.requiresItem}`);
+                return;
+            }
+            
+            // If the choice consumes a specific item
+            if (choice.consumeItem) {
+                const ok = consumeItemById(choice.consumeItem, 1);
+                if (!ok) {
+                    showAchievement(`Can't consume: ${items[choice.consumeItem]?.name}`);
+                    return;
+                } else {
+                    showAchievement(`Consumed: ${items[choice.consumeItem].name}`);
+                }
+            }
+            
+            // If the choice uses an item
+            if (choice.useItem) {
+                const ok = consumeItemById(choice.useItem, 1);
+                if (ok) {
+                    showAchievement(`Used: ${items[choice.useItem].name}`);
+                    state.selectedItem = null;
+                } else {
+                    showAchievement(`Missing: ${items[choice.useItem]?.name || choice.useItem}`);
+                    return;
+                }
+            }
+            
+            // Apply effects
+            if (choice.saturation !== undefined) {
+                state.saturation = Math.min(10, Math.max(0, state.saturation + choice.saturation));
+            }
+            if (choice.time !== undefined) {
+                state.time = Math.max(0, state.time + choice.time);
+            }
+            if (choice.coherence !== undefined) {
+                state.coherence = Math.max(0, Math.min(100, state.coherence + choice.coherence));
+            }
+            
+            // Memory loss with auto-protection
+            if (choice.memories) {
+                const memShard = getItem('memory_shard');
+                if (memShard) {
+                    consumeItemById('memory_shard', 1);
+                    showAchievement("Memory Shard protected your memories!");
+                } else {
+                    if (choice.memories === 'feelings') state.memories.feelings = false;
+                    if (choice.memories === 'places') state.memories.places = false;
+                    if (choice.memories === 'faces') state.memories.faces = false;
+                    if (choice.memories === 'all_but_names') {
+                        state.memories.feelings = false;
+                        state.memories.places = false;
+                        state.memories.faces = false;
+                    }
+                }
+            }
+            
+            if (choice.flags) {
+                state.flags[choice.flags] = true;
+            }
+            
+            if (choice.item) {
+                addItem(choice.item);
+            }
+
+            // Show next scene
+            showScene(choice.next);
+        }
+
+        function addItem(itemId) {
+            const itemDef = items[itemId];
+            if (itemDef) {
+                state.inventory.push({
+                    id: itemId,
+                    charges: itemDef.charges,
+                    used: false
+                });
+                showAchievement(`Found: ${itemDef.name}`);
+                updateInventory();
+            }
+        }
+
+        function useItem(item) {
+            const itemDef = items[item.id];
+            if (item.charges > 0 && !item.used) {
+                // Apply effects
+                if (itemDef.effect.saturation) {
+                    state.saturation = Math.max(0, Math.min(10, state.saturation + itemDef.effect.saturation));
+                }
+                if (itemDef.effect.coherence) {
+                    state.coherence = Math.max(0, Math.min(100, state.coherence + itemDef.effect.coherence));
+                }
+                if (itemDef.effect.time) {
+                    state.time = Math.max(0, state.time + itemDef.effect.time);
+                }
+                if (itemDef.effect.skipTableau) {
+                    // Jump to next tableau
+                    const nextTableau = Math.min(state.location + 1, 7);
+                    const tableauScenes = ['tableau1_entry', 'tableau2_entry', 'growth_entry', 'void_entry', 'synthesis_entry'];
+                    if (tableauScenes[nextTableau - 1]) {
+                        showScene(tableauScenes[nextTableau - 1]);
+                    }
+                }
+                
+                item.charges--;
+                if (itemDef.singleUse || item.charges <= 0) {
+                    item.used = true;
+                }
+                
+                showAchievement(`Used: ${itemDef.name}`);
+                updateHUD();
+                updateInventory();
+            }
+        }
+
+        function updateInventory() {
+            const grid = document.getElementById('inventoryGrid');
+            if (!grid) return;
+            
+            grid.innerHTML = '';
+            
+            // Show selected item display
+            if (state.selectedItem) {
+                const selectedDisplay = document.createElement('div');
+                selectedDisplay.className = 'inventory-header';
+                selectedDisplay.style.color = '#a78bfa';
+                selectedDisplay.innerHTML = `Selected: ${items[state.selectedItem.id].name}`;
+                grid.appendChild(selectedDisplay);
+            }
+            
+            if (!state.inventory) {
+                state.inventory = [];
+                return;
+            }
+            
+            state.inventory.forEach((item, index) => {
+                const itemDef = items[item.id];
+                if (!itemDef) return;
+                
+                const slot = document.createElement('div');
+                slot.className = 'item-slot';
+                
+                // Mark as selected if this is the selected item
+                if (state.selectedItem && state.selectedItem.id === item.id) {
+                    slot.classList.add('selected');
+                }
+                
+                // Mark as used if depleted
+                if (item.used || item.charges <= 0) {
+                    slot.classList.add('used');
+                }
+                
+                slot.innerHTML = `
+                    <div class="item-ascii">${itemDef.ascii}</div>
+                    <div class="item-name">${itemDef.name}</div>
+                    ${item.charges > 0 ? `<div class="item-charges">Charges: ${item.charges}</div>` : '<div class="item-charges">Depleted</div>'}
+                `;
+                
+                // Click to select/deselect, double-click to use
+                if (item.charges > 0) {
+                    let clickTimer = null;
+                    slot.onclick = () => {
+                        if (clickTimer) {
+                            // Double click - use item directly
+                            clearTimeout(clickTimer);
+                            clickTimer = null;
+                            if (itemDef.effect) {
+                                // Apply direct effects
+                                if (itemDef.effect.saturation) {
+                                    state.saturation = Math.max(0, Math.min(10, state.saturation + itemDef.effect.saturation));
+                                }
+                                if (itemDef.effect.coherence) {
+                                    state.coherence = Math.max(0, Math.min(100, state.coherence + itemDef.effect.coherence));
+                                }
+                                if (itemDef.effect.time) {
+                                    state.time = Math.max(0, state.time + itemDef.effect.time);
+                                }
+                                consumeItemById(item.id, 1);
+                                showAchievement(`Used: ${itemDef.name}`);
+                                state.selectedItem = null;
+                                updateHUD();
+                                showScene(state.currentScene);
+                            }
+                        } else {
+                            // Single click - select/deselect
+                            clickTimer = setTimeout(() => {
+                                clickTimer = null;
+                                if (state.selectedItem && state.selectedItem.id === item.id) {
+                                    state.selectedItem = null;
+                                    showAchievement(`Deselected: ${itemDef.name}`);
+                                } else {
+                                    state.selectedItem = item;
+                                    showAchievement(`Selected: ${itemDef.name} - ${itemDef.description}`);
+                                }
+                                updateInventory();
+                                showScene(state.currentScene);
+                            }, 250);
+                        }
+                    };
+                }
+                
+                grid.appendChild(slot);
+            });
+        }
+
+        function updateHUD() {
+            document.getElementById('saturationValue').textContent = `${state.saturation}/10`;
+            document.getElementById('saturationBar').style.width = `${state.saturation * 10}%`;
+            document.getElementById('timeValue').textContent = `${state.time}h`;
+            document.getElementById('locationValue').textContent = locations[state.location];
+            document.getElementById('coherenceValue').textContent = `${state.coherence}%`;
+            // Fix symptoms index bug - use Math.floor for integer index
+            document.getElementById('symptoms').textContent = symptoms[Math.min(Math.floor(state.saturation), symptoms.length - 1)];
+            
+            // Color coding for critical values
+            if (state.time <= 24) {
+                document.getElementById('timeValue').style.color = '#ff6b6b';
+            }
+            if (state.coherence <= 30) {
+                document.getElementById('coherenceValue').style.color = '#ff6b6b';
+            }
+        }
+
+        function checkEndConditions() {
+            if (state.time <= 0) {
+                showEnding('timeout');
+            } else if (state.coherence <= 0) {
+                showEnding('corrupted');
+            } else if (state.currentScene.includes('ending_')) {
+                const endingType = state.currentScene.replace('ending_', '');
+                showEnding(endingType);
+            }
+        }
+
+        function showEnding(type) {
+            const ending = endings[type];
+            document.getElementById('content').classList.remove('active');
+            document.getElementById('choices').classList.remove('active');
+            document.getElementById('gameOver').classList.add('active');
+            document.getElementById('endingTitle').textContent = ending.title;
+            document.getElementById('endingText').textContent = ending.text;
+            
+            // Show achievement if applicable
+            if (state.flags.becameBridge) {
+                showAchievement("Bridge Walker - Connected two worlds");
+            } else if (state.flags.resistedAll) {
+                showAchievement("The Unchanged - Maintained humanity");
+            } else if (state.flags.satOnThrone) {
+                showAchievement("Null Guardian - Embraced stillness");
+            }
+        }
+
+        function showAchievement(text) {
+            const achievement = document.createElement('div');
+            achievement.className = 'achievement';
+            achievement.textContent = '🏆 ' + text;
+            document.body.appendChild(achievement);
+            setTimeout(() => achievement.remove(), 4000);
+        }
+
+        function restartGame() {
+            // Reset state completely including inventory
+            state = {
+                saturation: 0,
+                time: 72,
+                location: 0,
+                coherence: 100,
+                memories: {
+                    sisterName: true,
+                    feelings: true,
+                    places: true,
+                    faces: true
+                },
+                flags: {
+                    acceptedStream: false,
+                    satOnThrone: false,
+                    becameBridge: false,
+                    resistedAll: false,
+                    splitSelf: false,
+                    gentleWorld: false,
+                    preventedContact: false
+                },
+                inventory: [],
+                currentScene: 'start'
+            };
+            
+            // Clear inventory display
+            document.getElementById('inventoryGrid').innerHTML = '';
+            
+            // Reset UI
+            document.getElementById('gameOver').classList.remove('active');
+            document.getElementById('titleScreen').classList.add('active');
+            document.getElementById('hud').classList.remove('active');
+            document.getElementById('inventory').classList.remove('active');
+            document.getElementById('content').classList.remove('active');
+            document.getElementById('choices').classList.remove('active');
+        }
+
+        // Save/Load System
+        function saveGame() {
+            localStorage.setItem('sornLaiSave', JSON.stringify(state));
+            showAchievement("Progress Saved");
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('sornLaiSave');
+            if (saved) {
+                state = JSON.parse(saved);
+                showScene(state.currentScene);
+                showAchievement("Progress Loaded");
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 's' && e.ctrlKey) {
+                e.preventDefault();
+                saveGame();
+            }
+            if (e.key === 'l' && e.ctrlKey) {
+                e.preventDefault();
+                loadGame();
+            }
+            // Number keys for choices
+            const choices = document.querySelectorAll('.choice');
+            if (e.key >= '1' && e.key <= '9') {
+                const index = parseInt(e.key) - 1;
+                if (choices[index]) {
+                    choices[index].click();
+                }
+            }
+        });
+
+        // Auto-save every scene change
+        let originalShowScene = showScene;
+        showScene = function(sceneId) {
+            originalShowScene(sceneId);
+            if (state.currentScene !== 'start') {
+                localStorage.setItem('sornLaiAutosave', JSON.stringify(state));
+            }
+        };
+
+        // Check for autosave on load
+        window.addEventListener('load', () => {
+            const autosave = localStorage.getItem('sornLaiAutosave');
+            if (autosave) {
+                const savedState = JSON.parse(autosave);
+                // Add continue button to title screen
+                const titleScreen = document.getElementById('titleScreen');
+                const continueBtn = document.createElement('button');
+                continueBtn.className = 'start-btn';
+                continueBtn.style.marginLeft = '10px';
+                continueBtn.textContent = 'Continue Journey';
+                continueBtn.onclick = () => {
+                    state = savedState;
+                    document.getElementById('titleScreen').classList.remove('active');
+                    document.getElementById('hud').classList.add('active');
+                    document.getElementById('content').classList.add('active');
+                    document.getElementById('choices').classList.add('active');
+                    showScene(state.currentScene);
+                };
+                titleScreen.querySelector('.start-btn').parentNode.appendChild(continueBtn);
+            }
+        });
+    </script>
+</body>
+</html>
